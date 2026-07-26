@@ -5,17 +5,19 @@ from fastapi import APIRouter, HTTPException, status
 from src.schemas.notifications import NotificationCreate, NotificationRecord, NotificationResponse
 
 
+notifications_storage: dict[UUID, NotificationRecord] = {}
+
+notifications_by_idempotency_key: dict[str, UUID] = {}
+
+
 router = APIRouter(
     prefix="/notifications",
     tags=["Notifications"],
 )
-
-notifications_storage: dict[UUID, NotificationRecord] = {}
-
-
 def to_notification_response(
         notification: NotificationRecord
 ) -> NotificationResponse:
+
     return NotificationResponse(
         id=notification.id,
         template_code=notification.template_code,
@@ -32,6 +34,14 @@ def to_notification_response(
 async def create_notification(
         payload: NotificationCreate,
 ) -> NotificationResponse:
+    if payload.idempotency_key is not None:
+        existing_id = notifications_by_idempotency_key.get(payload.idempotency_key)
+
+        if existing_id is not None:
+            existing_notification = notifications_storage.get(existing_id)
+
+            if existing_notification is not None:
+                return to_notification_response(existing_notification)
 
     notification = NotificationRecord(
         id=uuid4(),
@@ -39,6 +49,8 @@ async def create_notification(
     )
 
     notifications_storage[notification.id] = notification
+    if notification.idempotency_key is not None:
+        notifications_by_idempotency_key[notification.idempotency_key] = notification.id
 
     return to_notification_response(notification)
 
