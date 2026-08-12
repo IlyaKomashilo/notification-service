@@ -11,5 +11,5 @@ app.include_router(health_router)
 app.include_router(template_router)
 app.include_router(notification_router)
 
-
+# uvicorn src.main:app --reload --port 9000
 

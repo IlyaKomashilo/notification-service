@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 
 from src.api.dependencies import SessionDep
 from src.exceptions.notifications import IdempotencyConflictError
@@ -21,11 +22,20 @@ async def create_notification(payload: NotificationCreate, session: SessionDep) 
     service = NotificationService(repository)
 
     try:
-        async with session.begin():
-            notification = await service.create_notification(payload)
+        try:
+            async with session.begin():
+                notification = await service.create_notification(payload)
+        except IntegrityError:
+            if payload.idempotency_key is None:
+                raise
+
+            notification = await service.get_existing_idempotent_notification(payload)
 
     except IdempotencyConflictError as error:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT) from error
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="error",
+        ) from error
 
     return NotificationResponse.model_validate(notification)
 
