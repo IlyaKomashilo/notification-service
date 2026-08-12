@@ -3,7 +3,7 @@ from typing import Any
 from datetime import datetime, timezone
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 def utcnow() -> datetime:
@@ -39,6 +39,7 @@ class NotificationCreate(BaseModel):
 
 
 class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: UUID
     template_code: str
     recipient: str

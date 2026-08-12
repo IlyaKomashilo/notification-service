@@ -1,68 +1,40 @@
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
 
-from src.schemas.notifications import NotificationCreate, NotificationRecord, NotificationResponse
-
-
-notifications_storage: dict[UUID, NotificationRecord] = {}
-
-notifications_by_idempotency_key: dict[str, UUID] = {}
-
-
-router = APIRouter(
-    prefix="/notifications",
-    tags=["Notifications"],
+from src.api.dependencies import SessionDep
+from src.exceptions.notifications import IdempotencyConflictError
+from src.repositories.notifications import NotificationsRepository
+from src.schemas.notifications import (
+    NotificationCreate,
+    NotificationResponse,
 )
-def to_notification_response(
-        notification: NotificationRecord
-) -> NotificationResponse:
-
-    return NotificationResponse(
-        id=notification.id,
-        template_code=notification.template_code,
-        recipient=notification.recipient,
-        status=notification.status,
-    )
+from src.services.notification_service import NotificationService
 
 
-@router.post(
-    "",
-    response_model=NotificationResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def create_notification(
-        payload: NotificationCreate,
-) -> NotificationResponse:
-    if payload.idempotency_key is not None:
-        existing_id = notifications_by_idempotency_key.get(payload.idempotency_key)
-
-        if existing_id is not None:
-            existing_notification = notifications_storage.get(existing_id)
-
-            if existing_notification is not None:
-                return to_notification_response(existing_notification)
-
-    notification = NotificationRecord(
-        id=uuid4(),
-        **payload.model_dump(),
-    )
-
-    notifications_storage[notification.id] = notification
-    if notification.idempotency_key is not None:
-        notifications_by_idempotency_key[notification.idempotency_key] = notification.id
-
-    return to_notification_response(notification)
+router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 
-@router.get(
-    "/{notification_id}",
-    response_model=NotificationResponse,
-)
-async def get_notification(
-        notification_id: UUID,
-) -> NotificationResponse:
-    notification = notifications_storage.get(notification_id)
+@router.post("", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
+async def create_notification(payload: NotificationCreate, session: SessionDep) -> NotificationResponse:
+    repository = NotificationsRepository(session)
+    service = NotificationService(repository)
+
+    try:
+        async with session.begin():
+            notification = await service.create_notification(payload)
+
+    except IdempotencyConflictError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT) from error
+
+    return NotificationResponse.model_validate(notification)
+
+
+@router.get("/{notification_id}", response_model=NotificationResponse)
+async def get_notification(notification_id: UUID, session: SessionDep) -> NotificationResponse:
+    repository = NotificationsRepository(session)
+
+    notification = await repository.get_by_id(notification_id)
 
     if notification is None:
         raise HTTPException(
@@ -70,4 +42,4 @@ async def get_notification(
             detail=f"Notification {notification_id} not found",
         )
 
-    return to_notification_response(notification)
+    return NotificationResponse.model_validate(notification)
