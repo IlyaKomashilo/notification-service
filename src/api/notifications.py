@@ -34,7 +34,7 @@ async def create_notification(payload: NotificationCreate, session: SessionDep) 
     except IdempotencyConflictError as error:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="error",
+            detail=str(error),
         ) from error
 
     return NotificationResponse.model_validate(notification)
