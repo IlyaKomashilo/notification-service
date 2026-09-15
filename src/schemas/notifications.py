@@ -1,14 +1,8 @@
 from enum import Enum
 from typing import Any
-from datetime import datetime, timezone
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
-
-
-def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
-
 
 class NotificationStatus(str, Enum):
     PENDING = "pending"
@@ -44,12 +38,3 @@ class NotificationResponse(BaseModel):
     template_code: str
     recipient: str
     status: NotificationStatus
-
-
-class NotificationRecord(NotificationCreate):
-    id: UUID
-    status: NotificationStatus = NotificationStatus.PENDING
-    created_at: datetime = Field(
-        default_factory=utcnow,
-    )
-

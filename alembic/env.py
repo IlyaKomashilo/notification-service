@@ -28,6 +28,7 @@ if config.config_file_name is not None:
 from src.core.config import get_settings
 from src.db.base import Base
 from src.models import notification
+from src.models import template
 
 settings = get_settings()
 
