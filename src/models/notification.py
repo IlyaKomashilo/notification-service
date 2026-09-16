@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from typing import Any
 
-from sqlalchemy import DateTime, String, Uuid, func
+from sqlalchemy import DateTime, String, Uuid, func, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,6 +20,7 @@ class Notification(Base):
 
     template_code: Mapped[str] = mapped_column(
         String(length=50),
+        ForeignKey("templates.code"),
         nullable=False,
     )
 
