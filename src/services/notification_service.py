@@ -2,11 +2,13 @@ from src.exceptions.notifications import IdempotencyConflictError
 from src.models.notification import Notification
 from src.repositories.notifications import NotificationsRepository
 from src.schemas.notifications import NotificationCreate
+from src.services.template_service import TemplateService
 
 
 class NotificationService:
-    def __init__(self, repository: NotificationsRepository):
+    def __init__(self, repository: NotificationsRepository, template_service: TemplateService) -> None:
         self.repository = repository
+        self.template_service = template_service
 
     async def create_notification(self, payload: NotificationCreate) -> Notification:
         if payload.idempotency_key is not None:
@@ -15,8 +17,9 @@ class NotificationService:
             if existing is not None:
                 if self._is_same_request(existing, payload):
                     return existing
-
                 raise IdempotencyConflictError("Idempotency key is already used")
+
+        await self.template_service.get_template(payload.template_code)
 
         return await self.repository.add(payload)
 
