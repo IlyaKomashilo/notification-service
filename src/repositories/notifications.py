@@ -25,3 +25,12 @@ class NotificationsRepository:
         stmt = select(Notification).where(Notification.idempotency_key == idempotency_key)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def update_status(self, notification: Notification, status: str) -> None:
+        notification.status = status
+        await self.session.flush()
+
+    async def get_for_update(self, notification_id: UUID) -> Notification | None:
+        stmt = select(Notification).where(Notification.id == notification_id).with_for_update()
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()

@@ -1,9 +1,10 @@
 from uuid import UUID
 
+from aiosmtplib import SMTPException
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
-from src.api.dependencies import NotificationServiceDep, SessionDep
+from src.api.dependencies import NotificationServiceDep, SessionDep, EmailSenderDep
 from src.exceptions.templates import TemplateNotFoundError
 from src.repositories.notifications import NotificationsRepository
 from src.schemas.notifications import (
@@ -35,6 +36,32 @@ async def create_notification(
             raise TemplateNotFoundError("Template not found") from error
         else:
             raise
+
+    return NotificationResponse.model_validate(notification)
+
+
+@router.post("/{notification_id}/send", response_model=NotificationResponse, status_code=status.HTTP_200_OK)
+async def send_notification(
+        notification_id: UUID,
+        service: NotificationServiceDep,
+        session: SessionDep,
+        sender: EmailSenderDep,
+) -> NotificationResponse:
+    async with session.begin():
+        notification, rendered = await service.prepare_send(notification_id)
+
+    try:
+        await sender.send(recipient=notification.recipient,
+                          subject=rendered.subject,
+                          body=rendered.body,
+            )
+    except (SMTPException, OSError) as error:
+        async with session.begin():
+            await service.finish_send(notification_id, success=False)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Email sending failed") from error
+
+    async with session.begin():
+        notification = await service.finish_send(notification_id, success=True)
 
     return NotificationResponse.model_validate(notification)
 
