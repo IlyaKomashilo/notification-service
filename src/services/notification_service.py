@@ -1,7 +1,10 @@
-from src.exceptions.notifications import IdempotencyConflictError
+from uuid import UUID
+
+from src.exceptions.notifications import IdempotencyConflictError, NotificationNotFoundError, NotificationStatusError
 from src.models.notification import Notification
 from src.repositories.notifications import NotificationsRepository
 from src.schemas.notifications import NotificationCreate
+from src.schemas.templates import TemplateRenderResponse
 from src.services.template_service import TemplateService
 
 
@@ -44,3 +47,30 @@ class NotificationService:
             and notification.template_code == payload.template_code
             and notification.context == payload.context
         )
+
+    async def prepare_send(self, notification_id: UUID) -> tuple[Notification, TemplateRenderResponse]:
+        notification = await self.repository.get_for_update(notification_id)
+
+        if notification is None:
+            raise NotificationNotFoundError("Notification not found")
+        if notification.status != "pending":
+            raise NotificationStatusError("Notification is not pending")
+
+        rendered = await self.template_service.render_template(notification.template_code, notification.context)
+        await self.repository.update_status(notification, "processing")
+
+        return notification, rendered
+
+    async def finish_send(self, notification_id: UUID, success: bool) -> Notification:
+        notification = await self.repository.get_for_update(notification_id)
+
+        if notification is None:
+            raise NotificationNotFoundError("Notification not found")
+        if notification.status != "processing":
+            raise NotificationStatusError("Notification is not processing")
+        if success:
+            await self.repository.update_status(notification, "sent")
+        else:
+            await self.repository.update_status(notification, "failed")
+
+        return notification
