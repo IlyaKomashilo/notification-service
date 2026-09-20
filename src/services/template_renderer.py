@@ -2,7 +2,6 @@ from typing import Any
 
 from jinja2 import Environment, StrictUndefined
 
-
 env = Environment(undefined=StrictUndefined)
 
 

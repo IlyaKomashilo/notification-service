@@ -93,7 +93,9 @@ async def notification_id(client: AsyncClient, template_payload: dict) -> str:
     return response.json()["id"]
 
 
-async def set_status(db_session: AsyncSession, notification_id: str, status: str) -> None:
+async def set_status(
+    db_session: AsyncSession, notification_id: str, status: str
+) -> None:
     repo = NotificationsRepository(db_session)
     async with db_session.begin():
         notification = await repo.get_by_id(UUID(notification_id))
@@ -117,7 +119,9 @@ async def test_render_missing_template(client: AsyncClient) -> None:
     assert response.json() == {"detail": "Template not found"}
 
 
-async def test_create_existing_template(client: AsyncClient, template_payload: dict) -> None:
+async def test_create_existing_template(
+    client: AsyncClient, template_payload: dict
+) -> None:
     first = await client.post("/templates", json=template_payload)
     assert first.status_code == 201
 
@@ -127,7 +131,9 @@ async def test_create_existing_template(client: AsyncClient, template_payload: d
     assert response.json() == {"detail": "Template already exists"}
 
 
-async def test_render_missing_variable(client: AsyncClient, template_payload: dict) -> None:
+async def test_render_missing_variable(
+    client: AsyncClient, template_payload: dict
+) -> None:
     created = await client.post("/templates", json=template_payload)
     assert created.status_code == 201
 
@@ -151,7 +157,9 @@ async def test_notification_missing_template(client: AsyncClient) -> None:
     assert response.json() == {"detail": "Template not found"}
 
 
-async def test_notification_conflict(client: AsyncClient, template_payload: dict) -> None:
+async def test_notification_conflict(
+    client: AsyncClient, template_payload: dict
+) -> None:
     created = await client.post("/templates", json=template_payload)
     assert created.status_code == 201
     payload = notification_payload(template_payload["code"])
@@ -178,7 +186,9 @@ async def test_notification_repeat(client: AsyncClient, template_payload: dict) 
     assert response.json()["id"] == first.json()["id"]
 
 
-async def test_send_missing_notification(client: AsyncClient, sender: FakeSender) -> None:
+async def test_send_missing_notification(
+    client: AsyncClient, sender: FakeSender
+) -> None:
     response = await client.post(f"/notifications/{uuid4()}/send")
 
     assert response.status_code == 404

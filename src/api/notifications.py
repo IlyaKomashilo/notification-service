@@ -4,7 +4,7 @@ from aiosmtplib import SMTPException
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
-from src.api.dependencies import NotificationServiceDep, SessionDep, EmailSenderDep
+from src.api.dependencies import EmailSenderDep, NotificationServiceDep, SessionDep
 from src.exceptions.templates import TemplateNotFoundError
 from src.repositories.notifications import NotificationsRepository
 from src.schemas.notifications import (
@@ -15,7 +15,9 @@ from src.schemas.notifications import (
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
 
-@router.post("", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=NotificationResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_notification(
     payload: NotificationCreate,
     session: SessionDep,
@@ -40,25 +42,32 @@ async def create_notification(
     return NotificationResponse.model_validate(notification)
 
 
-@router.post("/{notification_id}/send", response_model=NotificationResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/{notification_id}/send",
+    response_model=NotificationResponse,
+    status_code=status.HTTP_200_OK,
+)
 async def send_notification(
-        notification_id: UUID,
-        service: NotificationServiceDep,
-        session: SessionDep,
-        sender: EmailSenderDep,
+    notification_id: UUID,
+    service: NotificationServiceDep,
+    session: SessionDep,
+    sender: EmailSenderDep,
 ) -> NotificationResponse:
     async with session.begin():
         notification, rendered = await service.prepare_send(notification_id)
 
     try:
-        await sender.send(recipient=notification.recipient,
-                          subject=rendered.subject,
-                          body=rendered.body,
-            )
+        await sender.send(
+            recipient=notification.recipient,
+            subject=rendered.subject,
+            body=rendered.body,
+        )
     except (SMTPException, OSError) as error:
         async with session.begin():
             await service.finish_send(notification_id, success=False)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Email sending failed") from error
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="Email sending failed"
+        ) from error
 
     async with session.begin():
         notification = await service.finish_send(notification_id, success=True)
@@ -67,7 +76,9 @@ async def send_notification(
 
 
 @router.get("/{notification_id}", response_model=NotificationResponse)
-async def get_notification(notification_id: UUID, session: SessionDep) -> NotificationResponse:
+async def get_notification(
+    notification_id: UUID, session: SessionDep
+) -> NotificationResponse:
     repository = NotificationsRepository(session)
 
     notification = await repository.get_by_id(notification_id)

@@ -1,5 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class TemplateCreate(BaseModel):
     code: str = Field(
@@ -23,7 +25,7 @@ class TemplateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     code: str
-    subject:str
+    subject: str
     body: str
 
 
@@ -32,5 +34,5 @@ class TemplateRenderRequest(BaseModel):
 
 
 class TemplateRenderResponse(BaseModel):
-    subject:str
+    subject: str
     body: str

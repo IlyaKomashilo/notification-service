@@ -11,7 +11,7 @@ class NotificationsRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def add (self, payload: NotificationCreate) -> Notification:
+    async def add(self, payload: NotificationCreate) -> Notification:
         notification = Notification(**payload.model_dump())
         self.session.add(notification)
         await self.session.flush()
@@ -22,7 +22,9 @@ class NotificationsRepository:
         return await self.session.get(Notification, notification_id)
 
     async def get_by_idempotency_key(self, idempotency_key: str) -> Notification | None:
-        stmt = select(Notification).where(Notification.idempotency_key == idempotency_key)
+        stmt = select(Notification).where(
+            Notification.idempotency_key == idempotency_key
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -31,6 +33,10 @@ class NotificationsRepository:
         await self.session.flush()
 
     async def get_for_update(self, notification_id: UUID) -> Notification | None:
-        stmt = select(Notification).where(Notification.id == notification_id).with_for_update()
+        stmt = (
+            select(Notification)
+            .where(Notification.id == notification_id)
+            .with_for_update()
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()

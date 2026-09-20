@@ -1,11 +1,17 @@
 import asyncio
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
+from src.core.config import get_settings
+from src.db.base import Base
+from src.models import (  # noqa: F401 -- register models in metadata
+    notification,
+    template,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -22,14 +28,6 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 
 
-
-
-
-from src.core.config import get_settings
-from src.db.base import Base
-from src.models import notification
-from src.models import template
-
 settings = get_settings()
 
 config.set_main_option(
@@ -38,9 +36,6 @@ config.set_main_option(
 )
 
 target_metadata = Base.metadata
-
-
-
 
 
 # other values from the config, defined by the needs of env.py,
