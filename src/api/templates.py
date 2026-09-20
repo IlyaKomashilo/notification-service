@@ -1,10 +1,14 @@
 from fastapi import APIRouter, status
 from sqlalchemy.exc import IntegrityError
 
-from src.schemas.templates import TemplateCreate, TemplateResponse, TemplateRenderResponse, TemplateRenderRequest
 from src.api.dependencies import SessionDep, TemplateServiceDep
 from src.exceptions.templates import TemplateAlreadyExistsError
-
+from src.schemas.templates import (
+    TemplateCreate,
+    TemplateRenderRequest,
+    TemplateRenderResponse,
+    TemplateResponse,
+)
 
 router = APIRouter(prefix="/templates", tags=["Templates"])
 
@@ -14,9 +18,9 @@ router = APIRouter(prefix="/templates", tags=["Templates"])
     response_model=TemplateRenderResponse,
 )
 async def render_notification_template(
-        template_code: str,
-        payload: TemplateRenderRequest,
-        service: TemplateServiceDep,
+    template_code: str,
+    payload: TemplateRenderRequest,
+    service: TemplateServiceDep,
 ) -> TemplateRenderResponse:
     return await service.render_template(template_code, payload.context)
 
@@ -27,9 +31,9 @@ async def render_notification_template(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_template(
-        payload: TemplateCreate,
-        session: SessionDep,
-        service: TemplateServiceDep,
+    payload: TemplateCreate,
+    session: SessionDep,
+    service: TemplateServiceDep,
 ) -> TemplateResponse:
     try:
         async with session.begin():
@@ -48,7 +52,7 @@ async def create_template(
     response_model=list[TemplateResponse],
 )
 async def get_templates(
-        service: TemplateServiceDep,
+    service: TemplateServiceDep,
 ) -> list[TemplateResponse]:
     templates = await service.get_templates()
 
@@ -60,8 +64,8 @@ async def get_templates(
     response_model=TemplateResponse,
 )
 async def get_template(
-        template_code: str,
-        service: TemplateServiceDep,
+    template_code: str,
+    service: TemplateServiceDep,
 ) -> TemplateResponse:
     template = await service.get_template(template_code)
     return TemplateResponse.model_validate(template)

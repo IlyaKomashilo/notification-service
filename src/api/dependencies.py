@@ -11,7 +11,6 @@ from src.services.email_sender import EmailSender
 from src.services.notification_service import NotificationService
 from src.services.template_service import TemplateService
 
-
 SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
@@ -31,7 +30,9 @@ async def get_notification_service(
     return NotificationService(repository, template_service)
 
 
-NotificationServiceDep = Annotated[NotificationService, Depends(get_notification_service)]
+NotificationServiceDep = Annotated[
+    NotificationService, Depends(get_notification_service)
+]
 
 
 async def get_email_sender() -> EmailSender:

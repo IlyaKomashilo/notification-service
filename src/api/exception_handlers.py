@@ -13,42 +13,54 @@ from src.exceptions.templates import (
 )
 
 
-async def template_not_found_handler(request: Request, error: TemplateNotFoundError) -> JSONResponse:
+async def template_not_found_handler(
+    request: Request, error: TemplateNotFoundError
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": str(error)},
     )
 
 
-async def template_exists_handler(request: Request, error: TemplateAlreadyExistsError) -> JSONResponse:
+async def template_exists_handler(
+    request: Request, error: TemplateAlreadyExistsError
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"detail": str(error)},
     )
 
 
-async def template_render_handler(request: Request, error: TemplateRenderError) -> JSONResponse:
+async def template_render_handler(
+    request: Request, error: TemplateRenderError
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={"detail": str(error)},
     )
 
 
-async def idempotency_conflict_handler(request: Request, error: IdempotencyConflictError) -> JSONResponse:
+async def idempotency_conflict_handler(
+    request: Request, error: IdempotencyConflictError
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"detail": str(error)},
     )
 
 
-async def notification_not_found_handler(request: Request, error: NotificationNotFoundError) -> JSONResponse:
+async def notification_not_found_handler(
+    request: Request, error: NotificationNotFoundError
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": str(error)},
     )
 
 
-async def notification_status_handler(request: Request, error: NotificationStatusError) -> JSONResponse:
+async def notification_status_handler(
+    request: Request, error: NotificationStatusError
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"detail": str(error)},
