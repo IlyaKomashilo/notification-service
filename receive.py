@@ -1,36 +1,54 @@
-import pika
+import asyncio
+
+import aio_pika
 from pydantic import ValidationError
 
+from src.db.database import async_session_factory
+from src.repositories.notifications import NotificationsRepository
+from src.repositories.templates import TemplatesRepository
 from src.schemas.events import BookingConfirmedEvent
-
-connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
-channel = connection.channel()
-
-channel.queue_declare(queue="hello", durable=True)
+from src.schemas.notifications import NotificationCreate
+from src.services.notification_service import NotificationService
+from src.services.template_service import TemplateService
 
 
-def handle_message(channel, method, properties, body):
-    try:
-        event = BookingConfirmedEvent.model_validate_json(body)
-    except ValidationError:
-        channel.basic_reject(
-            delivery_tag=method.delivery_tag,
-            requeue=False,
-        )
-        print("Сообщение отклонено: неправильные данные")
-        return
+async def main():
+    connection = await aio_pika.connect_robust("amqp://guest:guest@localhost/")
 
-    print("Событие:", event.event_type)
-    print("Получатель:", event.recipient)
-    print("Получили:", body.decode())
-    channel.basic_ack(delivery_tag=method.delivery_tag)
+    async with connection:
+        channel = await connection.channel()
+        queue = await channel.declare_queue("hello", durable=True)
+
+        print("Подключились к очереди:", queue.name)
+
+        async with queue.iterator() as messages:
+            async for message in messages:
+                try:
+                    event = BookingConfirmedEvent.model_validate_json(message.body)
+                    payload = NotificationCreate(
+                        template_code="booking_confirmed",
+                        recipient=event.recipient,
+                        context=event.context,
+                        idempotency_key=event.event_id,
+                    )
+                except ValidationError:
+                    print("Сообщение отклонено: неправильные данные")
+                    await message.reject(requeue=False)
+                    continue
+
+                async with async_session_factory() as session:
+                    async with session.begin():
+                        template_repository = TemplatesRepository(session)
+                        notification_repository = NotificationsRepository(session)
+                        template_service = TemplateService(template_repository)
+                        notification_service = NotificationService(
+                            notification_repository, template_service
+                        )
+
+                        await notification_service.create_notification(payload)
+
+                await message.ack()
 
 
-channel.basic_consume(
-    queue="hello",
-    on_message_callback=handle_message,
-    auto_ack=False,
-)
-
-print("Ждём сообщения")
-channel.start_consuming()
+if __name__ == "__main__":
+    asyncio.run(main())
