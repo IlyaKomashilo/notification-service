@@ -4,5 +4,10 @@ __pycache__/
 *.pyc
 .idea/
 .env
+.env.*
+!.env.example
 .DS_Store
 .ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
