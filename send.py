@@ -1,6 +1,9 @@
+import asyncio
 import json
 
-import pika
+import aio_pika
+
+from src.core.rabbitmq import RABBITMQ_URL, setup_queue
 
 event = {
     "event_id": "test-booking-001",
@@ -12,20 +15,20 @@ event = {
     },
 }
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
 
-channel = connection.channel()
+async def main():
+    connection = await aio_pika.connect_robust(RABBITMQ_URL)
+    async with connection:
+        channel = await connection.channel()
+        queue = await setup_queue(channel)
+        message = aio_pika.Message(
+            body=json.dumps(event).encode(),
+            content_type="application/json",
+            delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+        )
+        await channel.default_exchange.publish(message, routing_key=queue.name)
+        print("Сообщение отправлено")
 
-print("Подключение работает")
 
-channel.queue_declare(queue="hello", durable=True)
-
-channel.basic_publish(
-    exchange="",
-    routing_key="hello",
-    body=json.dumps(event),
-)
-
-print("Сообщение отправлено")
-
-connection.close()
+if __name__ == "__main__":
+    asyncio.run(main())
