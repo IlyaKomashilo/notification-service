@@ -6,7 +6,7 @@ import aio_pika
 from src.core.rabbitmq import RABBITMQ_URL, setup_queue
 
 event = {
-    "event_id": "test-booking-001",
+    "event_id": "test-booking-003",
     "event_type": "booking.confirmed",
     "recipient": "ilya@example.com",
     "context": {

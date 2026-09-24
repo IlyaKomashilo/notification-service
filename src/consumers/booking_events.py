@@ -1,12 +1,14 @@
 import asyncio
 
 import aio_pika
+from asyncpg import PostgresConnectionError
 from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from src.core.rabbitmq import RABBITMQ_URL, setup_queue
 from src.db.database import async_session_factory
 from src.exceptions.notifications import IdempotencyConflictError
+from src.exceptions.templates import TemplateNotFoundError
 from src.repositories.notifications import NotificationsRepository
 from src.repositories.templates import TemplatesRepository
 from src.schemas.events import BookingConfirmedEvent
@@ -67,6 +69,15 @@ async def main():
                     print("Сообщение отклонено: тот же event_id, но другие данные")
                     await message.reject(requeue=False)
                     continue
+                except TemplateNotFoundError:
+                    print("Сообщение отправлено в очередь ошибок: шаблон не найден")
+                    await message.reject(requeue=False)
+                    continue
+                except (SQLAlchemyError, OSError, PostgresConnectionError):
+                    print(
+                        "Ошибка работы с БД. Получатель остановлен без подтверждения сообщения."
+                    )
+                    raise
 
                 await message.ack()
 
