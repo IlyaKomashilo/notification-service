@@ -33,10 +33,10 @@ class FakeTemplatesRepository:
         return list(self.templates.values())
 
 
-def create_template(code: str = "booking_created") -> Template:
+def create_template(code: str = "message_ready") -> Template:
     return Template(
         code=code,
-        subject="Booking {{ booking_id }}",
+        subject="Message {{ message_id }}",
         body="Hello, {{ username }}!",
     )
 
@@ -45,8 +45,8 @@ async def test_create_template() -> None:
     repo = FakeTemplatesRepository()
     service = TemplateService(repo)
     payload = TemplateCreate(
-        code="booking_created",
-        subject="Booking {{ booking_id }}",
+        code="message_ready",
+        subject="Message {{ message_id }}",
         body="Hello, {{ username }}!",
     )
 
@@ -74,13 +74,13 @@ async def test_create_existing_template() -> None:
 
     assert len(repo.templates) == 1
     assert repo.templates[template.code] is template
-    assert template.subject == "Booking {{ booking_id }}"
+    assert template.subject == "Message {{ message_id }}"
     assert template.body == "Hello, {{ username }}!"
 
 
 async def test_get_template() -> None:
     first = create_template()
-    second = create_template(code="booking_cancelled")
+    second = create_template(code="message_cancelled")
     repo = FakeTemplatesRepository([first, second])
     service = TemplateService(repo)
 
@@ -100,7 +100,7 @@ async def test_get_missing_template() -> None:
 
 async def test_get_templates() -> None:
     first = create_template()
-    second = create_template(code="booking_cancelled")
+    second = create_template(code="message_cancelled")
     repo = FakeTemplatesRepository([first, second])
     service = TemplateService(repo)
 
@@ -122,20 +122,20 @@ async def test_render_template() -> None:
     template = create_template()
     repo = FakeTemplatesRepository([template])
     service = TemplateService(repo)
-    context = {"booking_id": 123, "username": "Ilya"}
+    context = {"message_id": 123, "username": "Ilya"}
 
     result = await service.render_template(template.code, context)
 
-    assert result.subject == "Booking 123"
+    assert result.subject == "Message 123"
     assert result.body == "Hello, Ilya!"
-    assert template.subject == "Booking {{ booking_id }}"
+    assert template.subject == "Message {{ message_id }}"
     assert template.body == "Hello, {{ username }}!"
 
 
 async def test_render_missing_template() -> None:
     repo = FakeTemplatesRepository()
     service = TemplateService(repo)
-    context = {"booking_id": 123, "username": "Ilya"}
+    context = {"message_id": 123, "username": "Ilya"}
 
     with pytest.raises(TemplateNotFoundError):
         await service.render_template("missing_template", context)
@@ -155,7 +155,7 @@ async def test_render_without_body_variable() -> None:
     template = create_template()
     repo = FakeTemplatesRepository([template])
     service = TemplateService(repo)
-    context = {"booking_id": 123}
+    context = {"message_id": 123}
 
     with pytest.raises(TemplateRenderError):
         await service.render_template(template.code, context)

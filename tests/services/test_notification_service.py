@@ -50,22 +50,22 @@ class FakeTemplateRepository:
 
 def create_template() -> Template:
     return Template(
-        code="booking_created",
-        subject="Booking {{ booking_id }}",
-        body="Your booking {{ booking_id }} is confirmed.",
+        code="message_ready",
+        subject="Message {{ message_id }}",
+        body="Your message {{ message_id }} is ready.",
     )
 
 
 def create_payload(
-    idempotency_key: str | None = "booking-123-created",
+    idempotency_key: str | None = "message-123-ready",
     recipient: str = "ilya@example.com",
     context: dict | None = None,
 ) -> NotificationCreate:
     if context is None:
-        context = {"booking_id": 123}
+        context = {"message_id": 123}
 
     return NotificationCreate(
-        template_code="booking_created",
+        template_code="message_ready",
         recipient=recipient,
         context=context,
         idempotency_key=idempotency_key,
@@ -73,16 +73,16 @@ def create_payload(
 
 
 def create_notification(
-    idempotency_key: str | None = "booking-123-created",
+    idempotency_key: str | None = "message-123-ready",
     recipient: str = "ilya@example.com",
     context: dict | None = None,
 ) -> Notification:
     if context is None:
-        context = {"booking_id": 123}
+        context = {"message_id": 123}
 
     return Notification(
         id=uuid4(),
-        template_code="booking_created",
+        template_code="message_ready",
         recipient=recipient,
         context=context,
         idempotency_key=idempotency_key,
@@ -169,7 +169,7 @@ async def test_same_key_different_payload() -> None:
     template_repo = FakeTemplateRepository()
     template_service = TemplateService(template_repo)
     service = NotificationService(repo, template_service)
-    payload = create_payload(context={"booking_id": 999})
+    payload = create_payload(context={"message_id": 999})
 
     with pytest.raises(IdempotencyConflictError):
         await service.create_notification(payload)

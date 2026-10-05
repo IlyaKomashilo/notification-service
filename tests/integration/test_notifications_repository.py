@@ -17,8 +17,8 @@ async def template(db_session: AsyncSession) -> Template:
     repo = TemplatesRepository(db_session)
     payload = TemplateCreate(
         code=f"test_{uuid4().hex}",
-        subject="Booking {{ booking_id }}",
-        body="Your booking {{ booking_id }} is confirmed.",
+        subject="Message {{ message_id }}",
+        body="Your message {{ message_id }} is ready.",
     )
     return await repo.add(payload)
 
@@ -27,7 +27,7 @@ def create_payload(template_code: str) -> NotificationCreate:
     return NotificationCreate(
         template_code=template_code,
         recipient="ilya@example.com",
-        context={"booking_id": 123},
+        context={"message_id": 123},
         idempotency_key=f"test-{uuid4().hex}",
     )
 
