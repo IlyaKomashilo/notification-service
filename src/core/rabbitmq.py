@@ -3,7 +3,7 @@ import aio_pika
 RABBITMQ_URL = "amqp://guest:guest@localhost/"
 
 
-async def setup_queue(channel, name="booking_events"):
+async def setup_queue(channel, name="notification_events"):
     failed_name = f"{name}.failed"
     exchange_name = f"{name}.dlx"
 

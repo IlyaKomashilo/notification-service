@@ -40,14 +40,22 @@ uvicorn src.main:app --reload --port 9000
 
 Сваггер тут: http://127.0.0.1:9000/docs.
 Первые две команды проверяют БД и применяют миграции. Последняя запускает API.
-Для бронирований нужен шаблон booking_confirmed. Создаём через POST /templates
+Для примера из scripts/send_event.py нужен шаблон. Создаём через POST /templates:
+
+```json
+{
+  "code": "welcome_message",
+  "subject": "Привет, {{ username }}!",
+  "body": "Рады тебя видеть, {{ username }}!"
+}
+```
 
 ## Слушать очередь
 
 В отдельном терминале с активной .venv:
 
 ```bash
-python -m src.consumers.booking_events
+python -m src.consumers.notification_events
 ```
 
 Если пишет, что подключился, и дальше молчит, всё нормально. Он ждёт сообщения.
@@ -62,8 +70,8 @@ python -m scripts.send_event
 Запускаем в другом терминале. Данные меняем в scripts/send_event.py.
 Новое событие = новый event_id
 
-В панели кролика смотрим booking_events. Отклонённые сообщения лежат
-в booking_events.failed
+В панели кролика смотрим notification_events. Отклонённые сообщения лежат
+в notification_events.failed
 
 ## Посмотреть письма
 
@@ -74,7 +82,15 @@ python -m scripts.send_event
 ```
 
 Открываем http://127.0.0.1:8025.
-Само письмо отправляем через POST /notifications/{id}/send в сваггере.
+Для отправки писем нужен ещё один терминал с воркером:
+
+```bash
+celery -A src.core.celery_app:app worker --loglevel=INFO --pool=solo
+```
+
+POST /notifications/{id}/send в сваггере кладёт задачу в рэббит.
+Ответ 202 значит, что задачу приняли. Письмо появится после работы воркера.
+Итоговый статус смотрим через GET /notifications/{id}.
 
 ## Перед коммитом
 
@@ -86,6 +102,13 @@ TEST_RABBITMQ_URL=amqp://guest:guest@localhost/ pytest -q
 
 Перед тестами проверь, что БД и рэббит запущены. Миграции тесты накатят сами.
 Можно просто pytest -q, но тогда два теста с кроликом пропустятся.
+
+## Что пока не закрыто
+
+- Сообщение в notification_events создаёт запись. Чтобы ушло письмо, отдельно вызываем POST /notifications/{id}/send.
+- Если SMTP упал, запись станет failed. Автоматического повтора пока нет.
+- Если воркер упал в середине отправки, запись может остаться в processing. Письмо могло уже уйти, поэтому вслепую отправлять ещё раз нельзя.
+- Рэббит с guest/guest и Mailpit настроены для локального запуска. Выставлять их наружу нельзя.
 
 ## Если что-то не работает
 

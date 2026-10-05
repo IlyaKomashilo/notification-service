@@ -11,7 +11,7 @@ from src.exceptions.notifications import IdempotencyConflictError
 from src.exceptions.templates import TemplateNotFoundError
 from src.repositories.notifications import NotificationsRepository
 from src.repositories.templates import TemplatesRepository
-from src.schemas.events import BookingConfirmedEvent
+from src.schemas.events import NotificationRequestedEvent
 from src.schemas.notifications import NotificationCreate
 from src.services.notification_service import NotificationService
 from src.services.template_service import TemplateService
@@ -51,9 +51,9 @@ async def main():
         async with queue.iterator() as messages:
             async for message in messages:
                 try:
-                    event = BookingConfirmedEvent.model_validate_json(message.body)
+                    event = NotificationRequestedEvent.model_validate_json(message.body)
                     payload = NotificationCreate(
-                        template_code="booking_confirmed",
+                        template_code=event.template_code,
                         recipient=event.recipient,
                         context=event.context,
                         idempotency_key=event.event_id,
